@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import ColorBends from './components/ColorBends'
+import DomeGallery from './components/DomeGallery/DomeGallery'
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -29,6 +30,17 @@ function useFadeIn() {
     return () => obs.disconnect()
   }, [])
   return [ref, visible]
+}
+
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= breakpoint)
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`)
+    const handler = e => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [breakpoint])
+  return isMobile
 }
 
 // Gradient text helper
@@ -73,87 +85,227 @@ const NAV_LINKS = [
 
 function Nav() {
   const scrolled = useScrolled(40)
+  const isMobile = useIsMobile()
   const [hover, setHover] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Close menu on resize to desktop
+  useEffect(() => {
+    if (!isMobile) setMenuOpen(false)
+  }, [isMobile])
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [menuOpen])
+
+  const logoEl = (
+    <a
+      href="#"
+      onClick={() => setMenuOpen(false)}
+      style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+    >
+      <div style={{
+        width: 32, height: 32, borderRadius: '8px',
+        background: 'linear-gradient(135deg, #ff5c7a, #8a5cff)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '1rem', fontWeight: 900, color: '#fff',
+      }}>◈</div>
+      <span style={{
+        fontFamily: "'Space Grotesk', sans-serif",
+        fontWeight: 800,
+        fontSize: '1.15rem',
+        letterSpacing: '-0.03em',
+        background: 'linear-gradient(90deg, #fff 30%, rgba(255,255,255,0.65))',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+      }}>
+        PRISM <span style={{ fontWeight: 300 }}>STUDIO</span>
+      </span>
+    </a>
+  )
 
   return (
-    <nav style={{
-      position: 'fixed',
-      inset: '0 0 auto 0',
-      zIndex: 200,
-      height: '70px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 clamp(1.25rem, 4vw, 3rem)',
-      backdropFilter: scrolled ? 'blur(22px) saturate(1.4)' : 'none',
-      WebkitBackdropFilter: scrolled ? 'blur(22px) saturate(1.4)' : 'none',
-      background: scrolled ? 'rgba(8,8,18,0.72)' : 'transparent',
-      borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : 'none',
-      transition: 'background 0.4s, backdrop-filter 0.4s, border-color 0.4s',
-    }}>
-      {/* Logo */}
-      <a href="#" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: '8px',
-          background: 'linear-gradient(135deg, #ff5c7a, #8a5cff)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '0.9rem', fontWeight: 900, color: '#fff',
-        }}>◆</div>
-        <span style={{
-          fontFamily: "'Space Grotesk', sans-serif",
-          fontWeight: 800,
-          fontSize: '1.15rem',
-          letterSpacing: '-0.03em',
-          background: 'linear-gradient(90deg, #fff 30%, rgba(255,255,255,0.65))',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-        }}>
-          PRISM <span style={{ fontWeight: 300 }}>STUDIO</span>
-        </span>
-      </a>
+    <>
+      <nav style={{
+        position: 'fixed',
+        inset: '0 0 auto 0',
+        zIndex: 200,
+        height: '70px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 clamp(1.25rem, 4vw, 3rem)',
+        backdropFilter: scrolled || menuOpen ? 'blur(22px) saturate(1.4)' : 'none',
+        WebkitBackdropFilter: scrolled || menuOpen ? 'blur(22px) saturate(1.4)' : 'none',
+        background: scrolled || menuOpen ? 'rgba(8,8,18,0.85)' : 'transparent',
+        borderBottom: scrolled || menuOpen ? '1px solid rgba(255,255,255,0.06)' : 'none',
+        transition: 'background 0.4s, backdrop-filter 0.4s, border-color 0.4s',
+      }}>
+        {logoEl}
 
-      {/* Links */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(1rem, 2.5vw, 2rem)' }}>
-        {NAV_LINKS.map(({ label, href }) => (
-          <a
-            key={label}
-            href={href}
-            onMouseEnter={() => setHover(label)}
-            onMouseLeave={() => setHover(null)}
+        {/* Desktop links */}
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(1rem, 2.5vw, 2rem)' }}>
+            {NAV_LINKS.map(({ label, href }) => (
+              <a
+                key={label}
+                href={href}
+                onMouseEnter={() => setHover(label)}
+                onMouseLeave={() => setHover(null)}
+                style={{
+                  textDecoration: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.07em',
+                  textTransform: 'uppercase',
+                  color: hover === label ? '#00ffd1' : 'rgba(255,255,255,0.6)',
+                  transition: 'color 0.2s',
+                }}
+              >
+                {label}
+              </a>
+            ))}
+            <a
+              href="#contact"
+              style={{
+                textDecoration: 'none',
+                padding: '0.55rem 1.4rem',
+                borderRadius: '100px',
+                background: 'linear-gradient(135deg, #ff5c7a 0%, #8a5cff 100%)',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                letterSpacing: '0.04em',
+                boxShadow: '0 0 24px rgba(138,92,255,0.35)',
+                transition: 'box-shadow 0.2s, transform 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 36px rgba(138,92,255,0.55)'; e.currentTarget.style.transform = 'scale(1.04)' }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 0 24px rgba(138,92,255,0.35)'; e.currentTarget.style.transform = 'scale(1)' }}
+            >
+              Let's Talk
+            </a>
+          </div>
+        )}
+
+        {/* Hamburger button */}
+        {isMobile && (
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
             style={{
-              textDecoration: 'none',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              letterSpacing: '0.07em',
-              textTransform: 'uppercase',
-              color: hover === label ? '#00ffd1' : 'rgba(255,255,255,0.6)',
-              transition: 'color 0.2s',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0.4rem',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '5px',
+              width: 36,
+              height: 36,
             }}
           >
-            {label}
+            <span style={{
+              display: 'block',
+              width: 22,
+              height: 2,
+              borderRadius: 2,
+              background: '#fff',
+              transition: 'transform 0.3s, opacity 0.3s',
+              transform: menuOpen ? 'translateY(7px) rotate(45deg)' : 'none',
+            }} />
+            <span style={{
+              display: 'block',
+              width: 22,
+              height: 2,
+              borderRadius: 2,
+              background: '#fff',
+              transition: 'opacity 0.3s',
+              opacity: menuOpen ? 0 : 1,
+            }} />
+            <span style={{
+              display: 'block',
+              width: 22,
+              height: 2,
+              borderRadius: 2,
+              background: '#fff',
+              transition: 'transform 0.3s, opacity 0.3s',
+              transform: menuOpen ? 'translateY(-7px) rotate(-45deg)' : 'none',
+            }} />
+          </button>
+        )}
+      </nav>
+
+      {/* Mobile menu overlay */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          inset: '70px 0 0 0',
+          zIndex: 199,
+          backdropFilter: 'blur(28px) saturate(1.5)',
+          WebkitBackdropFilter: 'blur(28px) saturate(1.5)',
+          background: 'rgba(8,8,18,0.92)',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem',
+          padding: '2rem',
+          opacity: menuOpen ? 1 : 0,
+          pointerEvents: menuOpen ? 'auto' : 'none',
+          transform: menuOpen ? 'translateY(0)' : 'translateY(-12px)',
+          transition: 'opacity 0.3s ease, transform 0.3s ease',
+        }}>
+          {NAV_LINKS.map(({ label, href }) => (
+            <a
+              key={label}
+              href={href}
+              onClick={() => setMenuOpen(false)}
+              style={{
+                textDecoration: 'none',
+                fontSize: '1.5rem',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                fontFamily: "'Space Grotesk', sans-serif",
+                color: 'rgba(255,255,255,0.75)',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '12px',
+                width: '100%',
+                textAlign: 'center',
+                transition: 'color 0.2s, background 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#00ffd1'; e.currentTarget.style.background = 'rgba(0,255,209,0.06)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.background = 'transparent' }}
+            >
+              {label}
+            </a>
+          ))}
+          <a
+            href="#contact"
+            onClick={() => setMenuOpen(false)}
+            style={{
+              marginTop: '1rem',
+              textDecoration: 'none',
+              padding: '0.9rem 2.5rem',
+              borderRadius: '100px',
+              background: 'linear-gradient(135deg, #ff5c7a 0%, #8a5cff 100%)',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: '1rem',
+              letterSpacing: '0.04em',
+              boxShadow: '0 0 32px rgba(138,92,255,0.4)',
+            }}
+          >
+            Let's Talk
           </a>
-        ))}
-        <a
-          href="#contact"
-          style={{
-            textDecoration: 'none',
-            padding: '0.55rem 1.4rem',
-            borderRadius: '100px',
-            background: 'linear-gradient(135deg, #ff5c7a 0%, #8a5cff 100%)',
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: '0.82rem',
-            letterSpacing: '0.04em',
-            boxShadow: '0 0 24px rgba(138,92,255,0.35)',
-            transition: 'box-shadow 0.2s, transform 0.2s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 36px rgba(138,92,255,0.55)'; e.currentTarget.style.transform = 'scale(1.04)' }}
-          onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 0 24px rgba(138,92,255,0.35)'; e.currentTarget.style.transform = 'scale(1)' }}
-        >
-          Let's Talk
-        </a>
-      </div>
-    </nav>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -390,6 +542,97 @@ function ServiceCard({ icon, color, title, desc, tags }) {
         ))}
       </div>
     </div>
+  )
+}
+
+// ─── Selected Work (DomeGallery) ───────────────────────────────────────────────
+
+const DOME_PROJECTS = [
+  { src: 'https://picsum.photos/800/600?random=1',  alt: 'Lumina',   projectName: 'Lumina',   projectCategory: 'Brand Identity'      },
+  { src: 'https://picsum.photos/800/600?random=2',  alt: 'Orbit',    projectName: 'Orbit',    projectCategory: 'Digital Campaign'    },
+  { src: 'https://picsum.photos/800/600?random=3',  alt: 'Solaris',  projectName: 'Solaris',  projectCategory: 'Brand Strategy'      },
+  { src: 'https://picsum.photos/800/600?random=4',  alt: 'Nexus',    projectName: 'Nexus',    projectCategory: 'UI/UX Design'        },
+  { src: 'https://picsum.photos/800/600?random=5',  alt: 'Vela',     projectName: 'Vela',     projectCategory: 'Motion & Film'       },
+  { src: 'https://picsum.photos/800/600?random=6',  alt: 'Dusk',     projectName: 'Dusk',     projectCategory: 'Brand Identity'      },
+  { src: 'https://picsum.photos/800/600?random=7',  alt: 'Praxis',   projectName: 'Praxis',   projectCategory: 'Digital Campaign'    },
+  { src: 'https://picsum.photos/800/600?random=8',  alt: 'Zeno',     projectName: 'Zeno',     projectCategory: 'Creative Direction'  },
+]
+
+function SelectedWork() {
+  const [ref, visible] = useFadeIn()
+  const [linkHover, setLinkHover] = useState(false)
+
+  return (
+    <section
+      id="selected-work"
+      ref={ref}
+      style={{
+        background: 'rgba(5, 5, 12, 0.94)',
+        paddingTop: 'clamp(80px, 10vw, 140px)',
+        paddingBottom: 'clamp(48px, 6vw, 80px)',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(40px)',
+        transition: 'opacity 0.7s ease, transform 0.7s ease',
+      }}
+    >
+      {/* Heading */}
+      <div style={{
+        textAlign: 'center',
+        padding: '0 clamp(1.25rem, 6vw, 4rem)',
+        marginBottom: '2.5rem',
+      }}>
+        <div style={pill}><span style={{ color: '#ff5c7a' }}>✦</span> Our portfolio</div>
+        <h2 style={{
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontWeight: 800,
+          fontSize: 'clamp(2rem, 4vw, 3.2rem)',
+          letterSpacing: '-0.03em',
+          color: '#fff',
+          margin: '0 0 0.65rem',
+        }}>
+          Selected <Grad colors="#ff5c7a, #8a5cff, #00ffd1">Work</Grad>
+        </h2>
+        <p style={{
+          fontSize: 'clamp(0.875rem, 1.4vw, 1rem)',
+          color: 'rgba(255,255,255,0.3)',
+          margin: 0,
+          letterSpacing: '0.02em',
+        }}>
+          A glimpse into what we've built
+        </p>
+      </div>
+
+      {/* Gallery */}
+      <div style={{ width: '100%', height: 'clamp(420px, 65vh, 660px)', position: 'relative' }}>
+        <DomeGallery
+          images={DOME_PROJECTS}
+          overlayBlurColor="#05050c"
+          grayscale={false}
+          fit={0.5}
+        />
+      </div>
+
+      {/* View All link */}
+      <div style={{ textAlign: 'center', marginTop: '2.25rem', padding: '0 clamp(1.25rem, 6vw, 4rem)' }}>
+        <a
+          href="#contact"
+          onMouseEnter={() => setLinkHover(true)}
+          onMouseLeave={() => setLinkHover(false)}
+          style={{
+            textDecoration: 'none',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+            color: linkHover ? '#fff' : 'rgba(255,255,255,0.45)',
+            borderBottom: `1px solid ${linkHover ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.18)'}`,
+            paddingBottom: '2px',
+            transition: 'color 0.2s, border-color 0.2s',
+          }}
+        >
+          View All Projects →
+        </a>
+      </div>
+    </section>
   )
 }
 
@@ -917,6 +1160,7 @@ export default function App() {
         <Nav />
         <Hero />
         <Services />
+        <SelectedWork />
         <Work />
         <About />
         <Contact />
